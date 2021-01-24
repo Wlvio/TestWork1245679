@@ -6,9 +6,9 @@ Vue.use(VueRouter);
 
 const routes = [
   {
-      name: 'index',
-      path: '/',
-      component:  IndexPageComponent
+    name: 'index',
+    path: '/',
+    component:  IndexPageComponent
   },
 ];
 

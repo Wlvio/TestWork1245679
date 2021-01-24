@@ -1,7 +1,7 @@
 <template>
   <div class="index-page__place-table">
     <h1 class="index-page__title">CRUD table</h1>
-    <template v-if="!peopleLoading">
+    <template v-if="!listUsersLoading">
       <div class="m-1 text-right">
         <v-dialog
           v-model="dialog"
@@ -108,7 +108,7 @@
                   <v-btn v-on:click="save(index)" class="mx-2" fab small color="#eeeeeee" icon>
                     <v-icon medium>save</v-icon>
                   </v-btn>
-                  <v-btn v-on:click="edit(index)" class="mx-2" fab small color="#eeeeeee" icon>
+                  <v-btn v-on:click="discard" class="mx-2" fab small color="#eeeeeee" icon>
                     <v-icon medium>cancel</v-icon>
                   </v-btn>
                 </template>
@@ -117,7 +117,7 @@
                 </template>
               </td>
               <td class="text-center">
-                <v-btn v-if="!item.saveLoader" @click="remove(index)" class="mx-2" fab small color="#eeeeeee" icon>
+                <v-btn v-if="!item.saveLoader && !item.removeLoader" @click="remove(index)" class="mx-2" fab small color="#eeeeeee" icon>
                   <v-icon medium>
                     clear
                   </v-icon>
@@ -131,13 +131,14 @@
         </template>
       </v-simple-table>
     </template>
-    <div class="text-center m-5" v-if="peopleLoading">
+    <div class="text-center m-5" v-if="listUsersLoading">
       <v-progress-circular :size="70" indeterminate class="primary--text"/>
     </div>
   </div>
 </template>
 
 <script>
+  import { mapGetters, mapActions } from 'vuex';
   export default {
     mounted() {
       this.getUsers();
@@ -145,11 +146,9 @@
     data () {
       return {
         paintKey: 0,
-        peopleLoading: true,
         peoples: [],
         dialog: false,
         valid: true,
-        createLoading: false,
         createForm: {
           name: '',
           last_name: '',
@@ -162,15 +161,22 @@
         ],
       }
     },
+    computed: {
+      ...mapGetters({
+        listUsersLoading: 'listUsersLoading',
+        listUsers: 'listUsers',
+        createLoading: 'createLoading',
+      }),
+    },
     methods: {
+      ...mapActions({
+        getListUsers: 'getListUsers',
+        addUser: 'addUser',
+        updateUser: 'updateUser',
+        removeUser: 'removeUser',
+      }),
       getUsers() {
-        this.peopleLoading = true;
-        axios
-          .get('/api/getUsers')
-          .then(response => {
-            this.peoples = response.data;
-            this.peopleLoading = false;
-          });
+        this.getListUsers();
       },
       paintKeyAdd() {
         this.paintKey += 1;
@@ -185,35 +191,34 @@
         this.peoples[index].edit = false;
         this.peoples[index].saveLoader = true;
         this.paintKeyAdd();
-        axios.put(`/api/updateUser`, this.peoples[index])
-          .then(() => {
-            this.getUsers();
-          });
+        this.updateUser(this.peoples[index]);
       },
       remove(index) {
         this.peoples[index].removeLoader = true;
-        axios.delete(`/api/removeUser`, {
-            data: {
-              id: this.peoples[index].id
-            },
-          })
-          .then(() => {
-            this.getUsers();
-          });
+        this.paintKeyAdd();
+        this.removeUser(this.peoples[index].id);
       },
       create() {
         if (this.$refs.addForm.validate()) {
-          this.createLoading = true;
-          axios.post(`/api/createUser`, this.createForm)
-          .then(() => {
-            this.getUsers();
-            this.dialog = false;
-          });
+          this.addUser(this.createForm);
         }
       },
       close() {
         this.dialog = false;
-      }
+      },
+      discard() {
+        this.peoples = this.$lodash.cloneDeep(this.listUsers);
+      },
+    },
+    watch: {
+      listUsers(value) {
+        this.peoples = this.$lodash.cloneDeep(value);
+      },
+      createLoading(value) {
+        if (value === false) {
+          this.dialog = false;
+        }
+      },
     },
   }
 </script>
